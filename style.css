@@ -301,3 +301,65 @@ body {
 .generate-btn i {
   margin-right: 8px;
 }
+
+/* Modal overlay styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(30, 40, 60, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal content styles */
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90vw;
+  padding: 32px 24px 24px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  position: relative;
+  text-align: left;
+}
+
+.modal-content img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto 18px auto;
+}
+
+.modal-content h3 {
+  font-size: 22px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.modal-content p {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.modal-content .modal-label {
+  font-weight: bold;
+  color: #3bb3ff;
+  margin-right: 6px;
+}
+
+@media (max-width: 500px) {
+  .modal-content {
+    max-width: 95vw;
+    padding: 18px 8px 12px 8px;
+  }
+  .modal-content img {
+    width: 90px;
+    height: 90px;
+  }
+}
