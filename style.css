@@ -186,6 +186,7 @@ body {
   display: flex;
   gap: 15px;
   min-height: 160px;
+  position: relative; /* Needed for checkbox and remove button positioning */
 }
 
 .product-card img {
@@ -211,6 +212,53 @@ body {
 .product-card p {
   font-size: 14px;
   color: #666;
+}
+
+/* Glowing blue border for selected cards */
+.selected-card {
+  border: 2px solid #3bb3ff;
+  box-shadow: 0 0 10px #3bb3ff;
+  padding-bottom: 60px; /* More space for button */
+  position: relative;
+}
+
+/* Blue checkbox for selected products */
+.selected-checkbox {
+  accent-color: #3bb3ff;
+}
+
+/* Blue checkbox for product grid */
+.select-checkbox {
+  accent-color: #3bb3ff;
+}
+
+/* Remove button: center at bottom, always visible */
+.remove-btn {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  width: 80%;
+  max-width: 140px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 12px;
+  margin: 0;
+  display: block;
+  z-index: 2;
+}
+
+/* Clear All button style (shares .remove-btn styles, but static position) */
+#clearSelectedBtn {
+  margin: 18px auto 0 auto;
+  position: static;
+  width: 80%;
+  max-width: 180px;
+  display: block;
 }
 
 /* selected products */
