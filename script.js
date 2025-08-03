@@ -30,6 +30,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let currentCategory = "";
   let currentSearch = "";
 
+  // Store chat history for OpenAI API
+  let chatMessages = [];
+
   /* Load selected products from localStorage */
   function loadSelectedProductsFromStorage() {
     const stored = localStorage.getItem("selectedProductIds");
@@ -305,44 +308,52 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Helper function to call OpenAI API with selected products
-  async function generateRoutineWithOpenAI(selectedProducts) {
-    // Build a beginner-friendly message for the API
-    const productList = selectedProducts
-      .map(
-        (p, i) =>
-          `${i + 1}. ${p.name} (${p.brand}) - ${p.category}: ${p.description}`
-      )
-      .join("\n");
+  // Helper function to display chat messages in chatWindow
+  function renderChatWindow() {
+    if (!chatWindow) return;
+    chatWindow.innerHTML = chatMessages
+      .map((msg) => {
+        if (msg.role === "user") {
+          // User message block with light blue border and spacing
+          return `
+            <div style="
+              border: 2px solid #3bb3ff;
+              background: #f5fbff;
+              border-radius: 8px;
+              margin-bottom: 16px;
+              padding: 14px 18px;
+              ">
+              <b>You:</b><br>${msg.content.replace(/\n/g, "<br>")}
+            </div>
+          `;
+        } else if (msg.role === "assistant") {
+          // AI message block with same light blue border and spacing
+          return `
+            <div style="
+              border: 2px solid #3bb3ff;
+              background: #f5fbff;
+              border-radius: 8px;
+              margin-bottom: 24px;
+              padding: 14px 18px;
+              ">
+              <b>Advisor:</b><br>${msg.content.replace(/\n/g, "<br>")}
+            </div>
+          `;
+        } else if (msg.role === "system") {
+          return ""; // Don't show system messages
+        }
+        return "";
+      })
+      .join("");
+    // Scroll to bottom
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  }
 
-    // The messages array for OpenAI's API
-    const messages = [
-      {
-        role: "system",
-        content:
-          "You are a helpful skincare and beauty routine assistant. Give a simple, step-by-step routine using only the products provided. Explain why each product is used and keep it beginner-friendly.",
-      },
-      {
-        role: "user",
-        content: `Here are the products I selected:\n${productList}\n\nPlease create a personalized routine for me using only these products.`,
-      },
-    ];
-
-    // Show loading message in chat
-    chatWindow.innerHTML = `<div>Generating your routine...</div>`;
-
-    // Check for API key before making the request
-    if (typeof apiKey === "undefined" || apiKey === "YOUR_OPENAI_API_KEY") {
-      chatWindow.innerHTML = `<div>
-        Error: OpenAI API key is missing or not set.<br>
-        Please add your API key in <code>secrets.js</code>.<br>
-        <span style="color:#e74c3c;">401 Unauthorized</span>
-      </div>`;
-      return;
-    }
-
+  // Helper function to call OpenAI API with full chat history
+  async function getOpenAIResponse(messages) {
     try {
-      // Make the API call using fetch and async/await
+      const apiKey =
+        "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";
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
         {
@@ -358,20 +369,13 @@ document.addEventListener("DOMContentLoaded", function () {
           }),
         }
       );
-
-      // If the API key is invalid, show a helpful error
       if (response.status === 401) {
-        chatWindow.innerHTML = `<div>
-          Error: Unauthorized (401).<br>
-          Your OpenAI API key may be invalid, expired, or not allowed for this endpoint.<br>
-          Please check your API key in <code>secrets.js</code>.
-        </div>`;
-        return;
+        return {
+          error:
+            "Error: Unauthorized (401). Your OpenAI API key may be invalid, expired, or not allowed for this endpoint. Please check your API key in secrets.js.",
+        };
       }
-
       const data = await response.json();
-
-      // Check if we got a valid response
       if (
         data &&
         data.choices &&
@@ -379,17 +383,53 @@ document.addEventListener("DOMContentLoaded", function () {
         data.choices[0].message &&
         data.choices[0].message.content
       ) {
-        // Display the routine in the chat window
-        chatWindow.innerHTML = `<div>${data.choices[0].message.content.replace(
-          /\n/g,
-          "<br>"
-        )}</div>`;
+        return { content: data.choices[0].message.content };
       } else {
-        chatWindow.innerHTML = `<div>Sorry, I couldn't generate a routine. Please try again.</div>`;
+        return {
+          error:
+            "Sorry, I couldn't generate a response. Check your API key, quota, or ask your instructor for help.",
+        };
       }
     } catch (error) {
-      // Show error message in chat
-      chatWindow.innerHTML = `<div>Error: ${error.message}</div>`;
+      return { error: `Error: ${error.message}` };
+    }
+  }
+
+  // Generate routine and start chat history
+  async function generateRoutineWithOpenAI(selectedProducts) {
+    const productList = selectedProducts
+      .map(
+        (p, i) =>
+          `${i + 1}. ${p.name} (${p.brand}) - ${p.category}: ${p.description}`
+      )
+      .join("\n");
+
+    // Reset chat history for new routine
+    chatMessages = [
+      {
+        role: "system",
+        content:
+          "You are a helpful skincare and beauty routine assistant. Give a simple, step-by-step routine using only the products provided. Explain why each product is used and keep it beginner-friendly. Only answer questions about beauty, skincare, haircare, makeup, fragrance, or the generated routine.",
+      },
+      {
+        role: "user",
+        content: `Here are the products I selected:\n${productList}\n\nPlease create a personalized routine for me using only these products.`,
+      },
+    ];
+
+    // Show loading message
+    chatWindow.innerHTML = `<div>Generating your routine...</div>`;
+
+    // Get response from OpenAI
+    const result = await getOpenAIResponse(chatMessages);
+    if (result.content) {
+      chatMessages.push({
+        role: "assistant",
+        content: result.content,
+      });
+      renderChatWindow();
+    } else {
+      chatWindow.innerHTML = `<div>${result.error}</div>`;
     }
   }
 
@@ -397,7 +437,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const generateBtn = document.getElementById("generateRoutine");
   if (generateBtn) {
     generateBtn.addEventListener("click", async function () {
-      // Get selected products
       const selectedProducts = allProducts.filter((p) =>
         selectedProductIds.includes(p.id)
       );
@@ -405,8 +444,81 @@ document.addEventListener("DOMContentLoaded", function () {
         chatWindow.innerHTML = `<div>Please select at least one product before generating a routine.</div>`;
         return;
       }
-      // Call OpenAI API and show routine
       await generateRoutineWithOpenAI(selectedProducts);
+    });
+  }
+
+  // Chat form submission handler for follow-up questions
+  if (chatForm) {
+    chatForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const userInput = document.getElementById("userInput").value.trim();
+      if (!userInput) return;
+
+      // Only allow questions about beauty, skincare, haircare, makeup, fragrance, or the routine
+      const allowedTopics = [
+        "skin",
+        "skincare",
+        "hair",
+        "haircare",
+        "makeup",
+        "fragrance",
+        "routine",
+        "product",
+        "beauty",
+        "serum",
+        "cleanser",
+        "moisturizer",
+        "sunscreen",
+        "foundation",
+        "mascara",
+        "shampoo",
+        "conditioner",
+        "color",
+        "treatment",
+        "eye",
+        "lip",
+        "face",
+        "men",
+        "grooming",
+      ];
+      const inputLower = userInput.toLowerCase();
+      const isAllowed = allowedTopics.some((topic) =>
+        inputLower.includes(topic)
+      );
+      if (!isAllowed) {
+        chatMessages.push({
+          role: "assistant",
+          content:
+            "Sorry, I can only answer questions about beauty, skincare, haircare, makeup, fragrance, or your routine.",
+        });
+        renderChatWindow();
+        chatForm.reset();
+        return;
+      }
+
+      // Add user message to chat history
+      chatMessages.push({
+        role: "user",
+        content: userInput,
+      });
+      renderChatWindow();
+
+      // Show loading message
+      chatWindow.innerHTML += `<div>Thinking...</div>`;
+
+      // Get response from OpenAI with full chat history
+      const result = await getOpenAIResponse(chatMessages);
+      if (result.content) {
+        chatMessages.push({
+          role: "assistant",
+          content: result.content,
+        });
+        renderChatWindow();
+      } else {
+        chatWindow.innerHTML += `<div>${result.error}</div>`;
+      }
+      chatForm.reset();
     });
   }
 
@@ -446,14 +558,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // Show initial placeholder
     updateProductsDisplay();
   });
-
-  /* Chat form submission handler - placeholder for OpenAI integration */
-  if (chatForm) {
-    chatForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (chatWindow) {
-        chatWindow.innerHTML = "Connect to the OpenAI API for a response!";
-      }
-    });
-  }
 });
+/* Chat form submission handler - placeholder for OpenAI integration */
+if (chatForm) {
+  chatForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (chatWindow) {
+      chatWindow.innerHTML = "Connect to the OpenAI API for a response!";
+    }
+  });
+}
