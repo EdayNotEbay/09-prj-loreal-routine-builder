@@ -352,29 +352,20 @@ document.addEventListener("DOMContentLoaded", function () {
   // Helper function to call OpenAI API with full chat history
   async function getOpenAIResponse(messages) {
     try {
-      const apiKey =
-        "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";
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: messages,
-            max_tokens: 500,
-          }),
-        }
-      );
-      if (response.status === 401) {
-        return {
-          error:
-            "Error: Unauthorized (401). Your OpenAI API key may be invalid, expired, or not allowed for this endpoint. Please check your API key in secrets.js.",
-        };
-      }
+      // Call your Cloudflare Worker endpoint instead of OpenAI directly
+      // Using your actual Worker URL
+      const workerUrl = "https://patient-dust-9c70.egriffin3639.workers.dev/";
+      const response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: messages,
+          max_tokens: 500,
+        }),
+      });
       const data = await response.json();
       if (
         data &&
@@ -387,7 +378,7 @@ document.addEventListener("DOMContentLoaded", function () {
       } else {
         return {
           error:
-            "Sorry, I couldn't generate a response. Check your API key, quota, or ask your instructor for help.",
+            "Sorry, I couldn't generate a response. Please check your Worker setup or ask your instructor for help.",
         };
       }
     } catch (error) {
