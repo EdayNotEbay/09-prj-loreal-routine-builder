@@ -3,6 +3,18 @@
 
 export default {
   async fetch(request, env) {
+    // Handle CORS preflight requests
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
+
     // Only allow POST requests
     if (request.method !== "POST") {
       return new Response("Method Not Allowed", { status: 405 });
@@ -12,19 +24,25 @@ export default {
     const body = await request.text();
 
     // Forward the request to OpenAI's API
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.OPENAI_API_KEY}` // Use Worker secret
-      },
-      body
-    });
+    const openaiResponse = await fetch(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.OPENAI_API_KEY}`, // Use Worker secret
+        },
+        body,
+      }
+    );
 
-    // Return the OpenAI response directly to the frontend
+    // Return the OpenAI response directly to the frontend, with CORS headers
     return new Response(await openaiResponse.text(), {
       status: openaiResponse.status,
-      headers: { "Content-Type": "application/json" }
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
     });
-  }
+  },
 };
